@@ -1,0 +1,142 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<title>Data Vis Assignment 1</title>
+	<link rel="stylesheet" href="https://dig.cmu.edu/datavis-fall-2024/assignments/report.css" />
+</head>
+
+<body>
+	<header>
+		<h1>
+			<small>Assignment 1</small>
+			Exploratory Data Analysis
+		</h1>
+
+		<p>
+			<strong>Eric Lin</strong> — <em>hongyual@andrew.cmu.edu</em>
+		</p>
+	</header>
+	<main>
+		<section>
+			<h2>Subtheme: [Substance Overdoses]</h2>
+
+			<h3>Overall Analysis Questions</h3>
+			<ol>
+				<li>How has alcohol’s role in overdose deaths changed over time?<br> 
+					Alcohol has long been one of the most widely used and socially accepted substances, 
+					but its role in fatal overdoses may be shifting. I read somewhere that younger generations 
+					are drinking less than previous ones, while more lethal substances like fentanyl dominate the current 
+					overdose crisis. Exploring alcohol’s involvement over time can reveal whether its contribution to 
+					overdose deaths has truly declined, and how its role compares to the rise of other drugs.</li>
+				<li>How do drug involvement patterns vary by race?<br>Different communities can be affected by the overdose
+					 crisis in different ways. Some drugs show up more often in certain groups than others, and looking at these 
+					 patterns can help explain why the crisis doesn’t look the same for everyone.</li>
+				<li>How do urban vs suburban zip codes differ?<br>Where someone lives can change the risks they face. 
+					City neighborhoods and suburban areas often have different access to drugs, healthcare, and emergency response, 
+					which might show up in the overdose data.</li>
+			</ol>
+		</section>
+
+		<section>
+			<h2>Discoveries & Insights</h2>
+
+			<figure>
+				<img src="imgs/allOD.png" alt="" />
+				<figcaption>
+					[All Fatal Overdoses by Year- P1]
+					Overdoses have climbed a lot in the past two decades, with a huge spike around the mid-2010s. That jump lines up with fentanyl showing up in the local drug supply. The trend makes it clear that the crisis today is on a whole different level than it used to be.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (1).png" alt="" />
+				<figcaption>
+					[Age Distribution- P1]
+					Most of the people who died were between their mid-20s and early-40s. You still see cases in older and younger groups, but the bulk of deaths hit folks in their prime working and family years. It shows how much of the impact falls on younger adults.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (2).png" alt="" />
+				<figcaption>
+					[Cases by Sex- P1]
+					Men make up a noticeably bigger share of overdose deaths compared to women. Both are affected, but the gap suggests different risks or behaviors between genders. That’s something worth considering when planning prevention.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (3).png" alt="" />
+				<figcaption>
+					[Cases by Race- P1]
+					White residents have the most cases overall, Black residents carry a big share too, since they have a smaller population. The crisis definitely isn’t hitting every community the same way. These differences show how uneven the risks are.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (4).png" alt="" />
+				<figcaption>
+					[Fatal Overdoses by Year- P1]
+					Breaking things down by drug type makes the shift clear: fentanyl and its analogs have taken over in recent years. Heroin, alcohol, and prescription opioids are still there, but they’ve been pushed to the background. The way the crisis has changed over time is really sharp in this view.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (5).png" alt="" />
+				<figcaption>
+					[Alcohol-Involved vs All Overdose Deaths- P2]
+					Alcohol cases rise and fall alongside the total overdoses, but they never hit the same scale. Even as overall deaths exploded, alcohol stayed fairly steady. It’s clear alcohol is around, but not the main driver.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (6).png" alt="" />
+				<figcaption>
+					[Share of Fatal Overdoses Involving Alcohol- P2]
+					As a percentage, alcohol shows up less and less over time. That’s not because it disappeared, but because fentanyl and other drugs have grown so much bigger. Alcohol’s role is more of a background factor now.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (7).png" alt="" />
+				<figcaption>
+					[Substance Category Shares Over Time- P2]
+					When you look at shares, fentanyl pushes everything else aside starting in the mid-2010s. Prescription opioids and heroin used to dominate, but now they’re smaller slices of the pie. Alcohol is a thin but steady line — always there, but never on top.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (8).png" alt="" />
+				<figcaption>
+					[When Alcohol Is Present, What Other Drugs Co-Occur?- P2]
+					Alcohol usually shows up alongside other substances, especially fentanyl, cocaine, and heroin. In recent years, alcohol + fentanyl has become really common. That makes it clear alcohol rarely acts on its own in these deaths.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (9).png" alt="" />
+				<figcaption>
+					[Drug Involvement by Race- P2]
+					The mix of drugs looks different depending on race. White decedents more often involve alcohol, benzos, and prescription opioids, while Black decedents see more cocaine. The crisis plays out differently across communities, not just in total numbers.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (10).png" alt="" />
+				<figcaption>
+					[Share of Cases Involving Alcohol by Area- P2]
+					Both urban and suburban areas have alcohol in the mix at similar levels. There isn’t a huge split, which suggests alcohol’s role is pretty steady no matter where you live. The real differences come from the other drugs it pairs with.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (11).png" alt="" />
+				<figcaption>
+					[Urban vs Suburban — Share of Cases by Drug Category- P2]
+					Urban cases are dominated by fentanyl, while suburban cases show more alcohol and prescription opioids in the mix. It reflects how the local drug supply and use patterns vary by area. Fentanyl is everywhere, but not always in the same proportions.				</figcaption>
+			</figure>
+
+			<figure>
+				<img src="imgs/visualization (12).png" alt="" />
+				<figcaption>
+					[Urban vs Suburban — Distinct Case Counts by Drug Category- P2]
+					Urban areas simply have more overdoses overall, especially from fentanyl. Suburban areas don’t have as many deaths, but within them alcohol and prescription opioids show up more often. The picture changes depending on whether you’re looking at raw numbers or proportions.				</figcaption>
+			</figure>
+		</section>
+
+		<section>
+			<h2>Summary</h2>
+
+			<p>Fentanyl has completely reshaped the overdose crisis, pushing older drivers like heroin and prescription opioids to the side. Alcohol is still present in a steady way, but it plays more of a supporting role, usually alongside other drugs. Different groups are affected in different ways — Black residents see more cocaine involvement, while White residents see more alcohol and prescription drugs. Urban areas face the biggest overdose numbers overall, while suburban areas have smaller but differently balanced patterns.</p>
+		</section>
+	</main>
+</body>
+</html>

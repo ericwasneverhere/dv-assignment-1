@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Explore — A1 Overdoses</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Vega libraries (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    body{font:16px/1.45 system-ui, sans-serif; margin:24px; max-width:1100px}
+    h1{margin-bottom:8px}
+    section{margin:28px 0}
+    .chart{margin:18px 0}
+    .note{color:#555; font-size:0.95rem}
+    code{background:#f6f6f6; padding:0 4px}
+  </style>
+</head>
+<body>
+  <h1>Allegheny County Overdoses</h1>
+  <script>
+    const CSV_PATH = "overdoses.csv";
+    const drugCols = [
+      "combined_od1","combined_od2","combined_od3","combined_od4","combined_od5",
+      "combined_od6","combined_od7","combined_od8","combined_od9","combined_od10"
+    ];
+  </script>
+
+  <!-- ================= PHASE 1: OVERVIEW ================= -->
+  <section>
+    <h2>Phase 1 — Overview</h2>
+    <div id="allTrend" class="chart"></div>
+    <div id="ageHist" class="chart"></div>
+    <div id="sexBar" class="chart"></div>
+    <div id="raceBar" class="chart"></div>
+    <!-- Moved here: stacked bars by year (counts) -->
+    <div id="drugCountsStacked" class="chart"></div>
+  </section>
+
+  <!-- ================= PHASE 2: QUESTIONS ================= -->
+  <section>
+    <h2>Phase 2 — Question-Driven</h2>
+
+    <h3>Q1: Alcohol’s role over time (vs. other drugs)</h3>
+    <div id="alcoholCount" class="chart"></div>
+    <div id="alcoholShare" class="chart"></div>
+    <div id="drugShares" class="chart"></div>
+    <div id="alcoholPartners" class="chart"></div>
+
+    <h3>Q2: Drug involvement patterns by race</h3>
+    <div id="raceDrugs" class="chart"></div>
+
+    <h3>Q3: Urban vs Suburban</h3>
+    <div id="urbanAlcoholShare" class="chart"></div>
+    <div id="areaDrugShare" class="chart"></div>
+    <!-- New: distinct case counts by drug category (Urban vs Suburban) -->
+    <div id="areaDrugCounts" class="chart"></div>
+  </section>
+
+  <script>
+    /* ================= PHASE 1 SPECS ================= */
+
+    const specAllTrend = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 260,
+      transform: [{ calculate: "toNumber(datum.case_year)", as: "year" }],
+      mark: { type: "line", point: true },
+      encoding: {
+        x: { field: "year", type: "ordinal", sort: "ascending", title: "Year" },
+        y: { aggregate: "count", title: "Fatal overdoses" },
+        tooltip: [{ field: "year" }, { aggregate: "count", title: "Cases" }]
+      },
+      title: "All Fatal Overdoses by Year"
+    };
+
+    const specAgeHist = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 240,
+      transform: [{ calculate: "toNumber(datum.age)", as: "ageNum" }],
+      mark: "bar",
+      encoding: {
+        x: { field: "ageNum", bin: { maxbins: 30 }, title: "Age" },
+        y: { aggregate: "count", title: "Cases" }
+      },
+      title: "Age Distribution"
+    };
+
+    const specSexBar = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 480, height: 240,
+      mark: "bar",
+      encoding: {
+        x: { field: "sex", type: "nominal", title: "Sex" },
+        y: { aggregate: "count", title: "Cases" },
+        tooltip: [{ aggregate: "count", title: "Cases" }]
+      },
+      title: "Cases by Sex"
+    };
+
+    const specRaceBar = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 480, height: 240,
+      transform: [{
+        calculate:
+          "datum.race=='W' ? 'White' : " +
+          "datum.race=='B' ? 'Black' : " +
+          "datum.race=='H' ? 'Hispanic' : " +
+          "datum.race=='A' ? 'Asian' : " +
+          "datum.race=='I' ? 'Native American' : " +
+          "datum.race=='O' ? 'Other' : " +
+          "datum.race=='M' ? 'Multiple/Other' : 'Unknown'",
+        as: "raceFull"
+      }],
+      mark: "bar",
+      encoding: {
+        x: { field: "raceFull", type: "nominal", title: "Race" },
+        y: { aggregate: "count", title: "Cases" },
+        tooltip: [{ aggregate: "count", title: "Cases" }]
+      },
+      title: "Cases by Race"
+    };
+
+    /* Stacked bars by year (distinct counts) */
+    const specDrugCountsStackedBar = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 360,
+      transform: [
+        { calculate: "toNumber(datum.case_year)", as: "year" },
+        { fold: drugCols, as: ["slot","drug"] },
+        {
+          calculate:
+            "lower(datum.drug) == 'alcohol' ? 'Alcohol' : " +
+            "(lower(datum.drug) == 'fentanyl' || lower(datum.drug) == 'acetyl fentanyl' || lower(datum.drug) == 'para-fluorofentanyl' ? 'Fentanyl & analogs' : " +
+            "(lower(datum.drug) == 'heroin' ? 'Heroin' : " +
+            "(lower(datum.drug) == 'cocaine' ? 'Cocaine' : " +
+            "(lower(datum.drug) == 'methamphetamine' ? 'Methamphetamine' : " +
+            "(lower(datum.drug) == 'alprazolam' || lower(datum.drug) == 'diazepam' || lower(datum.drug) == 'clonazepam' ? 'Benzodiazepines' : " +
+            "(lower(datum.drug) == 'oxycodone' || lower(datum.drug) == 'hydrocodone' || lower(datum.drug) == 'methadone' || lower(datum.drug) == 'morphine' || lower(datum.drug) == 'tramadol' ? 'Rx opioids' : 'Other'))))))",
+          as: "drugCat"
+        },
+        { filter: "datum.drugCat != 'Other'" },
+        { aggregate: [{ op: "distinct", field: "_id", as: "cases" }], groupby: ["year","drugCat"] }
+      ],
+      mark: "bar",
+      encoding: {
+        x: { field: "year", type: "ordinal", sort: "ascending", axis: { labelAngle: -45 }, title: "Year" },
+        y: { field: "cases", type: "quantitative", title: "Cases (distinct)" },
+        color: { field: "drugCat", type: "nominal", title: "Category" },
+        tooltip: [{ field: "year" }, { field: "drugCat", title: "Category" }, { field: "cases", title: "Cases (distinct)" }]
+      },
+      title: "Fatal Overdoses by Year — Stacked by Drug Category (Distinct Cases)"
+    };
+
+    /* ================= PHASE 2 — Q1: ALCOHOL OVER TIME ================= */
+
+    const specAlcoholCount = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 260,
+      transform: [
+        { calculate: "toNumber(datum.case_year)", as: "year" },
+        {
+          calculate:
+            "(lower(datum.combined_od1)=='alcohol'||lower(datum.combined_od2)=='alcohol'||lower(datum.combined_od3)=='alcohol'||lower(datum.combined_od4)=='alcohol'||lower(datum.combined_od5)=='alcohol'||lower(datum.combined_od6)=='alcohol'||lower(datum.combined_od7)=='alcohol'||lower(datum.combined_od8)=='alcohol'||lower(datum.combined_od9)=='alcohol'||lower(datum.combined_od10)=='alcohol')?1:0",
+          as: "hasAlcohol"
+        }
+      ],
+      layer: [
+        {
+          mark: { type: "line", point: true, strokeDash: [4,3] },
+          encoding: {
+            x: { field: "year", type: "ordinal", sort: "ascending" },
+            y: { aggregate: "count", title: "Cases" },
+            color: { value: "black" },
+            tooltip: [{ field: "year" }, { aggregate: "count", title: "All cases" }]
+          }
+        },
+        {
+          transform: [{ filter: "datum.hasAlcohol == 1" }],
+          mark: { type: "line", point: true },
+          encoding: {
+            x: { field: "year", type: "ordinal", sort: "ascending" },
+            y: { aggregate: "count" },
+            tooltip: [{ field: "year" }, { aggregate: "count", title: "Alcohol cases" }]
+          }
+        }
+      ],
+      title: "Alcohol-Involved vs All Overdose Deaths (Counts)"
+    };
+
+    const specAlcoholShare = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 260,
+      transform: [
+        { calculate: "toNumber(datum.case_year)", as: "year" },
+        {
+          calculate:
+            "(lower(datum.combined_od1)=='alcohol'||lower(datum.combined_od2)=='alcohol'||lower(datum.combined_od3)=='alcohol'||lower(datum.combined_od4)=='alcohol'||lower(datum.combined_od5)=='alcohol'||lower(datum.combined_od6)=='alcohol'||lower(datum.combined_od7)=='alcohol'||lower(datum.combined_od8)=='alcohol'||lower(datum.combined_od9)=='alcohol'||lower(datum.combined_od10)=='alcohol')?1:0",
+          as: "hasAlcohol"
+        },
+        { aggregate: [{ op: "sum", field: "hasAlcohol", as: "alcoholCases" }, { op: "count", as: "allCases" }], groupby: ["year"] },
+        { calculate: "datum.alcoholCases / datum.allCases", as: "alcoholShare" }
+      ],
+      mark: { type: "line", point: true },
+      encoding: {
+        x: { field: "year", type: "ordinal", sort: "ascending", title: "Year" },
+        y: { field: "alcoholShare", type: "quantitative", axis: { format: ".0%" }, title: "% of cases with Alcohol" },
+        tooltip: [
+          { field: "year" },
+          { field: "alcoholCases", title: "Alcohol cases" },
+          { field: "allCases", title: "All cases" },
+          { field: "alcoholShare", title: "Share", format: ".1%" }
+        ]
+      },
+      title: "Share of Fatal Overdoses Involving Alcohol"
+    };
+
+    /* 100% stacked area (composition by year) */
+    const specDrugShares = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 320,
+      transform: [
+        { calculate: "toNumber(datum.case_year)", as: "year" },
+        { fold: drugCols, as: ["slot","drug"] },
+        {
+          calculate:
+            "lower(datum.drug)=='alcohol'?'Alcohol':" +
+            "(lower(datum.drug)=='fentanyl'||lower(datum.drug)=='acetyl fentanyl'||lower(datum.drug)=='para-fluorofentanyl'?'Fentanyl & analogs':" +
+            "(lower(datum.drug)=='heroin'?'Heroin':" +
+            "(lower(datum.drug)=='cocaine'?'Cocaine':" +
+            "(lower(datum.drug)=='methamphetamine'?'Methamphetamine':" +
+            "(lower(datum.drug)=='alprazolam'||lower(datum.drug)=='diazepam'||lower(datum.drug)=='clonazepam'?'Benzodiazepines':" +
+            "(lower(datum.drug)=='oxycodone'||lower(datum.drug)=='hydrocodone'||lower(datum.drug)=='methadone'||lower(datum.drug)=='morphine'||lower(datum.drug)=='tramadol'?'Rx opioids':'Other'))))))",
+          as: "drugCat"
+        },
+        { filter: "datum.drugCat != 'Other'" },
+        { aggregate: [{ op: "distinct", field: "_id", as: "cases" }], groupby: ["year","drugCat"] },
+        { joinaggregate: [{ op: "sum", field: "cases", as: "yearTotal" }], groupby: ["year"] },
+        { calculate: "datum.cases / datum.yearTotal", as: "share" }
+      ],
+      mark: { type: "area" },
+      params: [{ name: "order", value: ["Fentanyl & analogs","Heroin","Cocaine","Benzodiazepines","Rx opioids","Alcohol"] }],
+      encoding: {
+        x: { field: "year", type: "ordinal", sort: "ascending", title: "Year" },
+        y: { field: "cases", type: "quantitative", stack: "normalize", axis: { format: ".0%" }, title: "Share of cases (by category)" },
+        color: { field: "drugCat", type: "nominal", sort: { field: "order" }, title: "Category" },
+        tooltip: [{ field: "year" }, { field: "drugCat", title: "Category" }, { field: "cases", title: "Cases" }, { field: "yearTotal", title: "Year total" }, { field: "share", title: "Share", format: ".1%" }]
+      },
+      title: "Substance Category Shares Over Time (Distinct cases per year; normalized)"
+    };
+
+    /* Alcohol co-occurrence partners over time */
+    const selectedPartners = ["Fentanyl","Cocaine","Heroin","Alprazolam","Oxycodone","Methadone","Morphine","Methamphetamine"];
+    const specAlcoholPartners = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 320,
+      transform: [
+        { calculate: "toNumber(datum.case_year)", as: "year" },
+        {
+          calculate:
+            "(lower(datum.combined_od1)=='alcohol'||lower(datum.combined_od2)=='alcohol'||lower(datum.combined_od3)=='alcohol'||lower(datum.combined_od4)=='alcohol'||lower(datum.combined_od5)=='alcohol'||lower(datum.combined_od6)=='alcohol'||lower(datum.combined_od7)=='alcohol'||lower(datum.combined_od8)=='alcohol'||lower(datum.combined_od9)=='alcohol'||lower(datum.combined_od10)=='alcohol')?1:0",
+          as: "hasAlcohol"
+        },
+        { filter: "datum.hasAlcohol == 1" },
+        { fold: drugCols, as: ["slot","drug"] },
+        { filter: "datum.drug && lower(datum.drug) != 'alcohol'" },
+        { filter: "indexof(partners, datum.drug) >= 0" }
+      ],
+      params: [{ name: "partners", value: selectedPartners }],
+      mark: "rect",
+      encoding: {
+        x: { field: "year", type: "ordinal", sort: "ascending", title: "Year" },
+        y: { field: "drug", type: "nominal", sort: selectedPartners, title: "Co-involved drug" },
+        color: { aggregate: "distinct", field: "_id", title: "Alcohol + drug cases" },
+        tooltip: [{ field: "year" }, { field: "drug" }, { aggregate: "distinct", field: "_id", title: "Cases" }]
+      },
+      title: "When Alcohol Is Present, What Other Drugs Co-Occur? (by Year)"
+    };
+
+    /* ================= PHASE 2 — Q2: RACE × DRUGS ================= */
+
+    const topDrugs = ["Fentanyl","Cocaine","Heroin","Alcohol","Alprazolam","Oxycodone","Methadone","Morphine","Methamphetamine"];
+    const specRaceDrugs = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 1000, height: 340,
+      transform: [
+        {
+          calculate:
+            "datum.race=='W' ? 'White' : " +
+            "datum.race=='B' ? 'Black' : " +
+            "datum.race=='H' ? 'Hispanic' : " +
+            "datum.race=='A' ? 'Asian' : " +
+            "datum.race=='I' ? 'Native American' : " +
+            "datum.race=='O' ? 'Other' : " +
+            "datum.race=='M' ? 'Multiple/Other' : 'Unknown'",
+          as: "raceFull"
+        },
+        { fold: drugCols, as: ["slot","drug"] },
+        { filter: "indexof(topDrugs, datum.drug) >= 0" }
+      ],
+      params: [{ name: "topDrugs", value: topDrugs }],
+      mark: "rect",
+      encoding: {
+        x: { field: "drug", type: "nominal", sort: topDrugs, title: "Drug" },
+        y: { field: "raceFull", type: "nominal", title: "Race" },
+        color: { aggregate: "distinct", field: "_id", title: "Cases" },
+        tooltip: [{ field: "raceFull", title: "Race" }, { field: "drug" }, { aggregate: "distinct", field: "_id", title: "Cases" }]
+      },
+      title: "Drug Involvement by Race (Distinct Cases; Selected Drugs)"
+    };
+
+    /* ================= PHASE 2 — Q3: URBAN vs SUBURBAN ================= */
+
+    /* Alcohol share by area */
+    const specUrbanSubAlcoholShare = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 600, height: 260,
+      transform: [
+        {
+          calculate:
+            "datum.incident_zip && test(/^152/, toString(datum.incident_zip)) ? 'Urban' : " +
+            "(datum.incident_zip ? 'Suburban' : null)",
+          as: "Area"
+        },
+        { filter: "datum.Area != null" },
+        {
+          calculate:
+            "(lower(datum.combined_od1)=='alcohol'||lower(datum.combined_od2)=='alcohol'||lower(datum.combined_od3)=='alcohol'||lower(datum.combined_od4)=='alcohol'||lower(datum.combined_od5)=='alcohol'||lower(datum.combined_od6)=='alcohol'||lower(datum.combined_od7)=='alcohol'||lower(datum.combined_od8)=='alcohol'||lower(datum.combined_od9)=='alcohol'||lower(datum.combined_od10)=='alcohol')?1:0",
+          as: "hasAlcohol"
+        },
+        { aggregate: [{ op: "sum", field: "hasAlcohol", as: "alcoholCases" }, { op: "count", as: "allCases" }], groupby: ["Area"] },
+        { calculate: "datum.alcoholCases / datum.allCases", as: "share" }
+      ],
+      mark: "bar",
+      encoding: {
+        x: { field: "Area", type: "nominal", sort: ["Urban","Suburban"] },
+        y: { field: "share", type: "quantitative", axis: { format: ".0%" }, title: "Alcohol share of cases" },
+        tooltip: [
+          { field: "Area" },
+          { field: "alcoholCases", title: "Alcohol cases" },
+          { field: "allCases", title: "All cases" },
+          { field: "share", title: "Share", format: ".1%" }
+        ]
+      },
+      title: "Share of Cases Involving Alcohol by Area"
+    };
+
+    /* Area × Drug category — shares (composition) */
+    const specAreaDrugShare = {
+      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      data: { url: CSV_PATH },
+      width: 900, height: 320,
+      transform: [
+        {
+          calculate:
+            "datum.incident_zip && test(/^152/, toString(datum.incident_zip)) ? 'Urban' : " +
+            "(datum.incident_zip ? 'Suburban' : null)",
+          as: "Area"
+        },
+        { filter: "datum.Area != null" },
+        { fold: drugCols, as: ["slot","drug"] },
+        {
+          calculate:
+            "lower(datum.drug) == 'alcohol' ? 'Alcohol' : " +
+            "(lower(datum.drug) == 'fentanyl' || lower(datum.drug) == 'acetyl fentanyl' || lower(datum.drug) == 'para-fluorofentanyl' ? 'Fentanyl & analogs' : " +
+            "(lower(datum.drug) == 'heroin' ? 'Heroin' : " +
+            "(lower(datum.drug) == 'cocaine' ? 'Cocaine' : " +
+            "(lower(datum.drug) == 'methamphetamine' ? 'Methamphetamine' : " +
+            "(lower(datum.drug) == 'alprazolam' || lower(datum.drug) == 'diazepam' || lower(datum.drug) == 'clonazepam' ? 'Benzodiazepines' : " +
+            "(lower(datum.drug) == 'oxycodone' || lower(datum.drug) == 'hydrocodone' || lower(datum.drug) == 'methadone' || lower(datum.drug) == 'morphine' || lower(datum.drug) == 'tramadol' ? 'Rx opioids' : 'Other'))))))",
+          as: "drugCat"
+        },
+        { filter: "datum.drugCat != 'Other'" },
+        { aggregate: [{ op: "distinct", field: "_id", as: "cases" }], groupby: ["Area","drugCat"] },
+        { joinaggregate: [{ op: "sum", field: "cases", as: "areaTotal" }], groupby: ["Area"] },
+        { calculate: "datum.cases / datum.areaTotal", as: "share" }
+      ],
+      mark: "bar",
+      encoding: {
+        x: { field: "Area", type: "nominal", sort: ["Urban","Suburban"], title: "" },
+        y: { field: "share", type: "quantitative", axis: { format: ".0%" }, title: "Share of cases" },
+        color: { field: "drugCat", type: "nominal", title: "Category" },
+        tooltip: [
+          { field: "Area" },
+          { field: "drugCat", title: "Category" },
+          { field: "cases", title: "Cases (distinct)" },
+          { field: "areaTotal", title: "Area total" },
+          { field: "share", title: "Share", format: ".1%" }
+        ]
+      },
+      title: "Urban vs Suburban — Share of Cases by Drug Category"
+    };
+
+    /*  Area × Drug category — distinct counts */
+    const specAreaDrugCounts = {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    data: { url: CSV_PATH },
+    width: 1000, height: 360,
+    transform: [
+        {
+        calculate:
+            "datum.incident_zip && test(/^152/, toString(datum.incident_zip)) ? 'Urban' : " +
+            "(datum.incident_zip ? 'Suburban' : null)",
+        as: "Area"
+        },
+        { filter: "datum.Area != null" },
+        { fold: drugCols, as: ["slot","drug"] },
+        {
+        calculate:
+            "lower(datum.drug) == 'alcohol' ? 'Alcohol' : " +
+            "(lower(datum.drug) == 'fentanyl' || lower(datum.drug) == 'acetyl fentanyl' || lower(datum.drug) == 'para-fluorofentanyl' ? 'Fentanyl & analogs' : " +
+            "(lower(datum.drug) == 'heroin' ? 'Heroin' : " +
+            "(lower(datum.drug) == 'cocaine' ? 'Cocaine' : " +
+            "(lower(datum.drug) == 'methamphetamine' ? 'Methamphetamine' : " +
+            "(lower(datum.drug) == 'alprazolam' || lower(datum.drug) == 'diazepam' || lower(datum.drug) == 'clonazepam' ? 'Benzodiazepines' : " +
+            "(lower(datum.drug) == 'oxycodone' || lower(datum.drug) == 'hydrocodone' || lower(datum.drug) == 'methadone' || lower(datum.drug) == 'morphine' || lower(datum.drug) == 'tramadol' ? 'Rx opioids' : 'Other'))))))",
+        as: "drugCat"
+        },
+        { filter: "datum.drugCat != 'Other'" },
+        // Distinct cases per Area × Category
+        { aggregate: [{ op: "distinct", field: "_id", as: "cases" }], groupby: ["Area","drugCat"] }
+    ],
+    mark: { type: "bar" },
+    encoding: {
+        x: { field: "drugCat", type: "nominal", title: "Category", sort: null },
+        xOffset: { field: "Area" },              // <- groups bars by Area within each category
+        y: { field: "cases", type: "quantitative", title: "Cases (distinct)" },
+        color: { field: "Area", type: "nominal", sort: ["Urban","Suburban"], title: "Area" },
+        tooltip: [
+        { field: "Area" },
+        { field: "drugCat", title: "Category" },
+        { field: "cases", title: "Cases (distinct)" }
+        ]
+    },
+    title: "Urban vs Suburban — Distinct Case Counts by Drug Category (Grouped Bars)"
+    };
+
+
+    /* ================= RENDER ================= */
+
+    // Phase 1
+    vegaEmbed("#allTrend", specAllTrend, { actions: true });
+    vegaEmbed("#ageHist", specAgeHist, { actions: true });
+    vegaEmbed("#sexBar", specSexBar, { actions: true });
+    vegaEmbed("#raceBar", specRaceBar, { actions: true });
+    vegaEmbed("#drugCountsStacked", specDrugCountsStackedBar, { actions: true });
+
+    // Phase 2
+    vegaEmbed("#alcoholCount", specAlcoholCount, { actions: true });
+    vegaEmbed("#alcoholShare", specAlcoholShare, { actions: true });
+    vegaEmbed("#drugShares", specDrugShares, { actions: true });
+    vegaEmbed("#alcoholPartners", specAlcoholPartners, { actions: true });
+
+    vegaEmbed("#raceDrugs", specRaceDrugs, { actions: true });
+
+    vegaEmbed("#urbanAlcoholShare", specUrbanSubAlcoholShare, { actions: true });
+    vegaEmbed("#areaDrugShare", specAreaDrugShare, { actions: true });
+    vegaEmbed("#areaDrugCounts", specAreaDrugCounts, { actions: true });
+  </script>
+</body>
+</html>
